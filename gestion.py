@@ -1,7 +1,8 @@
 import sqlite3
 import os 
 import time
-
+import tkinter as tk
+from tkinter import messagebox
 def clear():
     os.system('cls') if os.name == 'nt' else os.system('clear')
 
@@ -26,6 +27,7 @@ def registrar_producto(conexion):
     cursor = conexion.cursor()
     while True:
         try:
+            clear()
             print("CONTROL+C PARA SALIR")
             nombre_producto = input("Escriba el nombre del producto\n:")
             cantidad_producto = int(input("Escriba el stock del producto\n:"))
@@ -33,13 +35,15 @@ def registrar_producto(conexion):
             categoria_producto = input("Escriba la categoria del producto\n:")
             clear()
             
-            print(f"---PRODUCTO---\nNOMBRE:{nombre_producto}\nCANTIDAD:{cantidad_producto}\nPRECIO:{precio_producto}\nCATEGORIA:{categoria_producto}\n---")
+            print(f"---PRODUCTO---\nNOMBRE:{nombre_producto}\nCANTIDAD:{cantidad_producto}\nPRECIO:{precio_producto}\nCATEGORIA:{categoria_producto}\n-----------")
             confirmacion = input("Desea agregar el producto?(s/n)")
             if confirmacion.lower() == 's':
                 cursor.execute('''INSERT INTO productos(nombre_producto,cantidad_producto,precio_producto,categoria_producto) VALUES(?,?,?,?)''',(nombre_producto,cantidad_producto,precio_producto,categoria_producto))
                 conexion.commit()
                 print("PRODUCTO AGREGADO CON EXITO")
                 input("PRESIONE ENTER PARA CONTINUAR")
+                break
+
             else:
                 conexion.rollback()#limpia la operacion del cursor.execute()
                 continue
@@ -72,6 +76,7 @@ def editar_producto(conexion):
     cursor = conexion.cursor()
     while True:
         try:
+            ver_producto(conexion)
             cursor.execute('''SELECT id_producto FROM productos''')
             ids = list(map(lambda a: a[0],cursor.fetchall()))
             id = int(input("Escriba el id del producto a modificar(CTRL+C PARA SALIR)\n:"))
@@ -124,11 +129,13 @@ def editar_producto(conexion):
 def eliminar_producto(conexion):
     clear()
     cursor = conexion.cursor()
+    
     while True:
         try:
+            ver_producto(conexion)
             cursor.execute('''SELECT id_producto FROM productos''')
             ids = list(map(lambda a: a[0],cursor.fetchall()))
-            id = int(input("Escriba el id del producto a modificar(CTRL+C PARA SALIR)\n:"))
+            id = int(input("Escriba el id del producto a eliminar(CTRL+C PARA SALIR)\n:"))
             clear()
             if id in ids:
                 cursor.execute('''SELECT *FROM productos WHERE id_producto=?''',(id,))
@@ -159,36 +166,87 @@ def eliminar_producto(conexion):
 
 
 
-def menu():
-    database = conexion()
 
-    while 1:
-        clear()
-        print("--GESTION DE INVENTARIO CRUD 1.0--")
-        print("1.Registrar Producto")
-        print("2.Ver producto")
-        print("3.Editar producto")
-        print("4.Eliminar producto")
-        print("5.Salir")
-        
+
+#INTERFAZ
+
+def registrar_producto_gui(db):
+    cursor = db.cursor()
+    #Creamos subventana
+    ventana_registro = tk.Toplevel()
+    ventana_registro.title("Registrar Productos")
+    ventana_registro.geometry("300x400")
+    
+
+    #Campo: Nombre
+    tk.Label(ventana_registro,text="Nombre del producto:").pack(pady=5)
+    input_nombre = tk.Entry(ventana_registro)
+    input_nombre.pack(pady=5)
+
+    #Campo: Cantidad
+    tk.Label(ventana_registro,text="Stock del producto:").pack(pady=5)
+    input_cantidad = tk.Entry(ventana_registro)
+    input_cantidad.pack(pady=5)
+
+    #Campo: Precio
+    tk.Label(ventana_registro,text="Precio del producto:").pack(pady=5)
+    input_precio = tk.Entry(ventana_registro)
+    input_precio.pack(pady=5)
+
+    #Campo: Categoria
+    tk.Label(ventana_registro,text="Categoria del producto:").pack(pady=5)
+    input_categoria = tk.Entry(ventana_registro)
+    input_categoria.pack(pady=5)
+
+
+   
+    #Guardar los datos usando.get()
+    def guardar():
         try:
-            op = int(input("Escriba una opcion y presione ENTER\n:"))
-            match op:
-                case 1:
-                    registrar_producto(database)
-                case 2:
-                    ver_producto(database)
-                case 3:
-                    editar_producto(database)
-                case 4:
-                    eliminar_producto(database)
-                case 5:
-                    input("PRESIONE ENTER PARA SALIR")
-                    break
-                case _:
-                    print("Invalido")
-        except ValueError:
-            print("ERROR: INGRESE UN NUMERO POSITIVO VALIDO")
-            getchar()
+            nombre = input_nombre.get()
+            cantidad = int(input_cantidad.get())
+            precio = float(input_precio.get())
+            categoria = input_categoria.get()
 
-menu()
+            if not nombre or not cantidad or not precio or not categoria:
+                messagebox.showerror("ERROR: TODOS LOS CAMPOS SON OBLIGATORIOS")
+                return 
+            cursor.execute("INSERT INTO productos(nombre_producto,cantidad_producto,precio_producto,categoria_producto)VALUES(?,?,?,?)",(nombre,cantidad,precio,categoria))
+            db.commit()
+            messagebox.showinfo("GUARDADO EXITOSO")
+            ventana_registro.destroy()
+
+        except ValueError:
+            messagebox.showerror("ERROR: ingrese un numero positivo valido")
+
+    tk.Button(ventana_registro, text="Guardar Producto",command=guardar).pack(pady=20)
+
+
+
+
+def ventana_principal():
+    db = conexion()
+    root = tk.Tk()
+    root.title("Gestion de inventario CRUD 1.0")
+    root.geometry("400x300")
+
+
+    #Titulo
+    label_titulo = tk.Label(root, text="GESTION DE INVENTARIO CRUD 1.0",font=("Arial",16,"bold"))
+    label_titulo.pack(pady=20)
+    
+    #Botonesss
+    boton_registrar = tk.Button(root,text="Registrar nuevo producto",width=25,
+                                command=lambda:registrar_producto_gui(db))
+    
+    boton_registrar.pack(pady=10)
+    boton_salir = tk.Button(root,text="Salir",width=25,command=root.quit)
+    boton_salir.pack(pady=10)
+
+
+
+    root.mainloop()
+
+
+ventana_principal()
+
