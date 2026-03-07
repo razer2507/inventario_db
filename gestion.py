@@ -2,11 +2,10 @@ import sqlite3
 import os 
 import time
 import tkinter as tk
-from tkinter import messagebox
-def clear():
-    os.system('cls') if os.name == 'nt' else os.system('clear')
+from tkinter import messagebox,ttk
 
 
+##CONEXION A DB 
 def conexion():
     conexion = sqlite3.connect("productos.db")
     cursor = conexion.cursor()
@@ -19,154 +18,6 @@ def conexion():
     conexion.commit()
     return conexion
 
-def getchar():
-    input("PRESIONE ENTER PARA CONTINUAR")
-
-def registrar_producto(conexion):
-    clear()
-    cursor = conexion.cursor()
-    while True:
-        try:
-            clear()
-            print("CONTROL+C PARA SALIR")
-            nombre_producto = input("Escriba el nombre del producto\n:")
-            cantidad_producto = int(input("Escriba el stock del producto\n:"))
-            precio_producto = float(input("Escriba el precio del producto\n:"))
-            categoria_producto = input("Escriba la categoria del producto\n:")
-            clear()
-            
-            print(f"---PRODUCTO---\nNOMBRE:{nombre_producto}\nCANTIDAD:{cantidad_producto}\nPRECIO:{precio_producto}\nCATEGORIA:{categoria_producto}\n-----------")
-            confirmacion = input("Desea agregar el producto?(s/n)")
-            if confirmacion.lower() == 's':
-                cursor.execute('''INSERT INTO productos(nombre_producto,cantidad_producto,precio_producto,categoria_producto) VALUES(?,?,?,?)''',(nombre_producto,cantidad_producto,precio_producto,categoria_producto))
-                conexion.commit()
-                print("PRODUCTO AGREGADO CON EXITO")
-                input("PRESIONE ENTER PARA CONTINUAR")
-                break
-
-            else:
-                conexion.rollback()#limpia la operacion del cursor.execute()
-                continue
-
-        except ValueError:
-            print("ERROR: DATO INVALIDO")
-        except KeyboardInterrupt:
-            break
-
-def ver_producto(conexion):
-    clear()
-    cursor = conexion.cursor()
-    cursor.execute('''SELECT *FROM productos''')
-    filas = cursor.fetchall()
-
-    header = f"{'ID':<5} | {'NOMBRE':<20} | {'CANT':<8} | {'PRECIO':<12} | {'CATEGORÍA':<15}"
-    
-    print("\n" + header)
-    print("-" * len(header)) 
-    for i in filas:
-        print(f"{i[4]:<5} | {i[0]:<20.20} | {i[1]:<8} | ${i[2]:<11.2f} | {i[3]:<15}")
-    
-    print("-" * len(header) + "\n")
-
-    input("PRESIONE ENTER PARA SALIR")
-    clear()
-
-def editar_producto(conexion):
-    clear()
-    cursor = conexion.cursor()
-    while True:
-        try:
-            ver_producto(conexion)
-            cursor.execute('''SELECT id_producto FROM productos''')
-            ids = list(map(lambda a: a[0],cursor.fetchall()))
-            id = int(input("Escriba el id del producto a modificar(CTRL+C PARA SALIR)\n:"))
-            if id in ids:
-                clear()
-                cursor.execute('''SELECT *FROM productos WHERE id_producto=?''',(id,))
-                datos = cursor.fetchall()
-                modificacion = int(input(f"PRODUCTO ENCONTRADO\n1-Nombre: {datos[0][0]}\n2-Cantidad: {datos[0][1]}\n3-Precio: {datos[0][2]}\n4-Categoria: {datos[0][3]}\nEscriba el dato a modificar(CTRL+C PARA SALIR): "))
-                match modificacion:
-                    case 1:
-                        clear()
-                        nuevo_nombre = input("Escriba el nuevo nombre\n:")
-                        cursor.execute("UPDATE productos SET nombre_producto=? WHERE id_producto=?",(nuevo_nombre,id))
-                        getchar()
-                        clear()
-                    case 2:
-                        clear()
-                        nueva_cantidad = int(input("Escriba la nueva cantidad"))
-                        cursor.execute("UPDATE productos SET cantidad_producto=? WHERE id_producto=?",(nueva_cantidad,id))
-                        getchar()
-                        clear() 
-                    case 3:
-                        clear()
-                        nuevo_precio = int(input("Escriba el nuevo precio\n:"))
-                        cursor.execute("UPDATE productos SET precio_producto=? WHERE id_producto=?",(nuevo_precio,id))
-                        getchar() 
-                        clear()     
-                    case 4:
-                        clear()
-                        nueva_categoria = input("Escriba la nueva categoria \n:")
-                        cursor.execute("UPDATE productos SET categoria_producto=? WHERE id_producto=?",(nueva_categoria,id)) 
-                        getchar() 
-                        clear()
-                conexion.commit()   
-                clear()
-
-            else:
-                clear()
-                print(f"ID INVALIDO:\nRANGO VALIDO {ids[0]} - {len(ids)+1}")
-                input("PRESIONE ENTER PARA REINTENTAR(CTRL+C PARA SALIR)")
-                clear()
-        except ValueError:
-            clear()
-            print("ERROR:INGRESE UN NUMERO ENTERO POSITIVO")
-            input("PRESIONE ENTER PARA CONTINUAR")
-        except KeyboardInterrupt:
-            clear()
-            break
-
-def eliminar_producto(conexion):
-    clear()
-    cursor = conexion.cursor()
-    
-    while True:
-        try:
-            ver_producto(conexion)
-            cursor.execute('''SELECT id_producto FROM productos''')
-            ids = list(map(lambda a: a[0],cursor.fetchall()))
-            id = int(input("Escriba el id del producto a eliminar(CTRL+C PARA SALIR)\n:"))
-            clear()
-            if id in ids:
-                cursor.execute('''SELECT *FROM productos WHERE id_producto=?''',(id,))
-                datos = cursor.fetchall()
-                modificacion = input(f"PRODUCTO ENCONTRADO\n1-Nombre: {datos[0][0]}\n2-Cantidad: {datos[0][1]}\n3-Precio: {datos[0][2]}\n4-Categoria: {datos[0][3]}\nConfirma que quiere eliminar?(s/n) (CTRL+C PARA SALIR): ")
-                if modificacion.lower() == 's':
-                    clear()
-                    cursor.execute("DELETE FROM productos WHERE id_producto=?",(id,))
-                    print("ELIMINADO CORRECTAMENTE")
-                    conexion.commit()
-                    getchar()
-                    clear()
-                else:
-                    continue
-            else:
-                clear()
-                print(f"ID INVALIDO:\nRANGO VALIDO {ids[0]} - {len(ids)+1}")
-                input("PRESIONE ENTER PARA REINTENTAR(CTRL+C PARA SALIR)")
-                clear()
-        except ValueError:
-            clear()
-            print("ERROR:INGRESE UN NUMERO ENTERO POSITIVO")
-            input("PRESIONE ENTER PARA CONTINUAR")
-            clear()
-        except KeyboardInterrupt:
-            clear()
-            break
-
-
-
-
 
 #INTERFAZ
 
@@ -177,6 +28,17 @@ def registrar_producto_gui(db):
     ventana_registro.title("Registrar Productos")
     ventana_registro.geometry("300x400")
     
+
+    #Mostramos el id proximo del producto a registrar
+    cursor.execute("SELECT seq FROM sqlite_sequence WHERE name='productos'")
+    resultado = cursor.fetchone()
+    if resultado:
+        ultimo_id = resultado[0]
+        tk.Label(ventana_registro,text=f"PRODUCTO ID #{ultimo_id+1}").pack(pady=5)
+    else:
+        tk.Label(ventana_registro,text=f"PRODUCTO ID #{1}").pack(pady=5)
+
+
 
     #Campo: Nombre
     tk.Label(ventana_registro,text="Nombre del producto:").pack(pady=5)
@@ -199,7 +61,7 @@ def registrar_producto_gui(db):
     input_categoria.pack(pady=5)
 
 
-   
+    
     #Guardar los datos usando.get()
     def guardar():
         try:
@@ -222,8 +84,131 @@ def registrar_producto_gui(db):
     tk.Button(ventana_registro, text="Guardar Producto",command=guardar).pack(pady=20)
 
 
+def ver_producto_gui(db):
+    cursor = db.cursor()
+    cursor.execute("SELECT id_producto,nombre_producto,precio_producto,cantidad_producto FROM productos")
+    ventana = tk.Toplevel()
+    ventana.title("VISUALIZAR PRODUCTOS")
+    ventana.geometry("300x400")
+    tabla = ttk.Treeview(ventana, columns=("id", "nombre", "precio", "cantidad"), show="headings")
+    tabla.heading("id",text="ID")
+    tabla.heading("nombre",text="NOMBRE")
+    tabla.heading("precio",text="PRECIO")
+    tabla.heading("cantidad",text="CANTIDAD")
+    tabla.column("id",width=50,anchor="center")
+    tabla.column("nombre",width=200,anchor="w")
+    tabla.column("precio",width=100,anchor="e")
+    tabla.column("cantidad",width=80,anchor='center')
+    filas = cursor.fetchall()
+    for producto in filas:
+        tabla.insert("",tk.END,values=producto)
+
+    tabla.pack(pady=20)
+
+def eliminar_producto_gui(db):
+    ventana = tk.Toplevel()
+    ventana.title("VISUALIZAR PRODUCTOS")
+    ventana.geometry("300x400")
+
+    cursor = db.cursor()
+
+    tk.Label(ventana,text="Id del producto:").pack(pady=5)
+    input_id = tk.Entry(ventana)
+    input_id.pack(pady=5)
+    
+    def confirmar_eliminacion():
+        try:
+            id_buscar = int(input_id.get())
+            cursor.execute("SELECT id_producto FROM productos WHERE id_producto=?",(id_buscar,))
+            consulta = cursor.fetchone()
+            if consulta != None:
+                cursor.execute("DELETE FROM productos WHERE id_producto=?",(id_buscar,))
+                db.commit()
+                messagebox.showinfo("EXITO","EL PRODUCTO HA SIDO BORRADO EXITOSAMENTE")
+                ventana.destroy()
+            else:
+                messagebox.showerror("ERROR","ID NO ENCONTRADO EN LA BASE DE DATOS")
+
+        except ValueError:
+            messagebox.showerror(f"ERROR","EL ID DEBE SER UN NUMERO ENTERO POSITIVO")
+
+    tk.Button(ventana,text="ELIMINAR",command=confirmar_eliminacion).pack()
+
+def modificar_producto(db):
+    cursor = db.cursor()
 
 
+    ventana = tk.Toplevel()
+    ventana.title("MODIFICAR PRODUCTOS")
+    ventana.geometry("400x300")
+    tk.Label(ventana,text="Id del producto:").pack(pady=5)
+    input_id = tk.Entry(ventana)
+    input_id.pack(pady=5)
+
+    def confimar_modificacion():
+        try:
+            id = int(input_id.get())
+            cursor.execute("SELECT nombre_producto,cantidad_producto,precio_producto,categoria_producto FROM productos WHERE id_producto=?",(id,))
+            consulta = cursor.fetchone()
+            if consulta != None:
+
+                tk.Label(ventana,text="NOMBRE DEL PRODUCTO").pack(pady=5)
+                input_nombre = tk.Entry(ventana)
+                input_nombre.insert(0,consulta[0])
+                input_nombre.pack(pady=5)
+                
+                tk.Label(ventana,text="CANTIDAD DEL PRODUCTO").pack(pady=5)
+                input_cantidad = tk.Entry(ventana)
+                input_cantidad.insert(0,consulta[1])
+                input_cantidad.pack(pady=5)
+                
+                tk.Label(ventana,text="PRECIO DEL PRODUCTO").pack(pady=5)
+                input_precio = tk.Entry(ventana)
+                input_precio.insert(0,consulta[2])
+                input_precio.pack(pady=5)
+               
+
+                tk.Label(ventana,text="CATEGORIA DEL PRODUCTO").pack(pady=5)
+                input_categoria = tk.Entry(ventana)
+                input_categoria.insert(0,consulta[3])
+                input_categoria.pack(pady=5)
+               
+
+                def guardar_cambios():
+                    nombre = input_nombre.get()
+                    cantidad = int(input_cantidad.get())
+                    precio = float(input_precio.get())
+                    categoria = input_categoria.get()
+
+                    cursor.execute('''UPDATE productos SET 
+                               nombre_producto=?,
+                               cantidad_producto=?,
+                               precio_producto=?,
+                               categoria_producto=?
+                               WHERE id_producto=?''',
+                               (nombre,
+                                cantidad,
+                                precio,
+                                categoria,id))
+                
+                    messagebox.showinfo("EXITO","MODIFICACION EXITOSA")
+                    db.commit()
+                    ventana.destroy()
+                tk.Button(ventana,text="CONFIRMAR",command=guardar_cambios).pack()   
+            else:
+                messagebox.showerror("ERROR","ID INVALIDO")
+                ventana.destroy()
+
+        except ValueError:
+            messagebox.showerror("ERROR","EL ID DEBE SER UN NUMERO ENTERO POSITIVO")
+            ventana.destroy()
+
+
+
+    tk.Button(ventana,text="MODIFICAR",command=confimar_modificacion).pack()
+
+
+  
 def ventana_principal():
     db = conexion()
     root = tk.Tk()
@@ -238,12 +223,24 @@ def ventana_principal():
     #Botonesss
     boton_registrar = tk.Button(root,text="Registrar nuevo producto",width=25,
                                 command=lambda:registrar_producto_gui(db))
-    
     boton_registrar.pack(pady=10)
+    
+    boton_visualizar = tk.Button(root,text="Ver productos",width=25,
+                                 command=lambda:ver_producto_gui(db))
+    boton_visualizar.pack(pady=10)
+
+    boton_eliminar = tk.Button(root,text="Eliminar productos",width=25,
+                               command=lambda:eliminar_producto_gui(db))
+    boton_eliminar.pack(pady=10)
+
+    boton_modificar = tk.Button(root,text="Modificar productos",width=25,
+                                command=lambda:modificar_producto(db))
+    boton_modificar.pack(pady=10)
+
     boton_salir = tk.Button(root,text="Salir",width=25,command=root.quit)
     boton_salir.pack(pady=10)
 
-
+    
 
     root.mainloop()
 
