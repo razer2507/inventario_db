@@ -9,12 +9,22 @@ from tkinter import messagebox,ttk
 def conexion():
     conexion = sqlite3.connect("productos.db")
     cursor = conexion.cursor()
+    cursor.execute("PRAGMA foreign_keys = ON;")
     cursor.execute('''CREATE TABLE IF NOT EXISTS productos (
                              nombre_producto VARCHAR(20) NOT NULL,
                              cantidad_producto INTEGER NOT NULL,
                              precio_producto NUMERIC(10,2),
                              categoria_producto VARCHAR(20),
                              id_producto INTEGER PRIMARY KEY AUTOINCREMENT)''')
+    
+    cursor.execute('''CREATE TABLE IF NOT EXISTS ventas(
+                   id_venta INTEGER PRIMARY KEY AUTOINCREMENT,
+                   id_producto INTEGER,
+                   FOREIGN KEY (id_producto) REFERENCES productos(id_producto),
+                   nombre_venta_cliente VARCHAR(20) NOT NULL,
+                   cantidad_venta INTEGER NOT NULL,
+                   ganancia_bruta_venta NUMERIC(10,2)
+                   )''')
     conexion.commit()
     return conexion
 
@@ -87,7 +97,34 @@ def registrar_producto_gui(db):
 def ver_producto_gui(db):
     cursor = db.cursor()
     cursor.execute("SELECT id_producto,nombre_producto,precio_producto,cantidad_producto FROM productos")
+    filas = cursor.fetchall()
+   
+
+
+    
+    
     ventana = tk.Toplevel()
+    frame_busqueda = tk.Frame(ventana)
+    frame_busqueda.pack(pady=10)
+
+    tk.Label(frame_busqueda, text="Buscar por nombre:").pack(side=tk.LEFT)
+    input_busqueda = tk.Entry(frame_busqueda)
+    input_busqueda.pack(side=tk.LEFT, padx=5)
+    def buscar_productos():
+        texto_entrada = input_busqueda.get()
+        cursor.execute("SELECT id_producto,nombre_producto,precio_producto,cantidad_producto FROM PRODUCTOS WHERE nombre_producto LIKE ?",(f'%{texto_entrada}%',))
+        filas = cursor.fetchall()
+        for i in tabla.get_children():
+            tabla.delete(i)
+        for producto in filas:
+            tabla.insert("",tk.END,values=producto)
+        
+
+
+    boton_buscar = tk.Button(ventana,text="BUSCAR",command=buscar_productos)
+    boton_buscar.pack()
+
+
     ventana.title("VISUALIZAR PRODUCTOS")
     ventana.geometry("300x400")
     tabla = ttk.Treeview(ventana, columns=("id", "nombre", "precio", "cantidad"), show="headings")
@@ -99,9 +136,13 @@ def ver_producto_gui(db):
     tabla.column("nombre",width=200,anchor="w")
     tabla.column("precio",width=100,anchor="e")
     tabla.column("cantidad",width=80,anchor='center')
-    filas = cursor.fetchall()
     for producto in filas:
         tabla.insert("",tk.END,values=producto)
+    
+   
+
+    
+
 
     tabla.pack(pady=20)
 
