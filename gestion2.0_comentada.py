@@ -212,16 +212,16 @@ class InterfazGrafica(tk.Tk):
         categoria = self.entrada_categoria.get()
 
 
+        operacion = self.logica.registrar_producto(nombre,cantidad,precio,categoria)
+        messagebox.showinfo("Exito","Producto registrado exitosamente")if operacion else messagebox.showerror("Error","Producto invalido")
+
+
         #Limpiamos la entrada luego de que el user presione el boton
         self.entrada_nombre.delete(0,tk.END)
         self.entrada_cantidad.delete(0,tk.END)
         self.entrada_precio.delete(0,tk.END)
         self.entrada_categoria.delete(0,tk.END)
 
-        operacion = self.logica.registrar_producto(nombre,cantidad,precio,categoria)
-        messagebox.showinfo("Exito","Producto registrado exitosamente")if operacion else messagebox.showerror("Error","Producto invalido")
-
-     
 
 
 '''
