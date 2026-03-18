@@ -1,4 +1,6 @@
 import sqlite3
+import tkinter as tk
+from tkinter import messagebox,ttk
 #comit1
 # ==========================================
 # CAPA DE BASE DE DATOS (DATA ACCESS LAYER)
@@ -15,7 +17,7 @@ class GestorDb():
     def crear_tabla(self):
         """Define la estructura de la tabla 'productos' si no existe."""
         query1 = '''CREATE TABLE IF NOT EXISTS productos (
-                             nombre_producto VARCHAR(20) NOT NULL,
+                             nombre_producto VARCHAR(50) NOT NULL,
                              cantidad_producto INTEGER NOT NULL,
                              precio_producto NUMERIC(10,2),
                              categoria_producto VARCHAR(20),
@@ -78,7 +80,8 @@ class LogicaNegocio():
     
     def validar_nombres(self, nombre):
         """Valida que el nombre no esté vacío y no supere 20 caracteres."""
-        if not nombre or len(str(nombre)) > 20:
+        if not nombre or len(str(nombre)) > 50:
+            print('NOMBRE: EXCEDE LOS 20 CARACTERES')
             return 0
         return str(nombre).lower()
             
@@ -88,6 +91,7 @@ class LogicaNegocio():
             cantidad = int(cantidad)
             return cantidad if cantidad > 0 else 0
         except (ValueError, TypeError):
+            print("CANTIDAD: DEBE SER UN NUMERO ENTERO MAYOR A 0")
             return 0
             
     def validar_precio(self, precio):
@@ -96,13 +100,16 @@ class LogicaNegocio():
             precio = float(precio)
             return precio if precio > 0 else 0
         except (ValueError, TypeError):
+            print("PRECIO: DEBE SER UN NUMERO ENTERO MAYOR A 0")
             return 0
             
     def validar_categoria(self, categoria):
         """Verifica que la categoría esté dentro de la lista permitida."""
-        if not categoria:
-            return 0
         categoria = str(categoria).lower()
+        if not categoria:
+            print("CATEGORIA: LA CATEGORIA DEBE ESTAR DENTRO DE LAS CATEGORIAS PERMITIDAS")
+            return 0
+        
         return categoria if categoria in self.categorias else 0
             
     def registrar_producto(self, nombre, cantidad, precio, categoria):
@@ -119,10 +126,13 @@ class LogicaNegocio():
                 fila = (n, cant, p, cat)
                 self.base_datos.producto_insertar_datos(fila)
                 print('"LOGICA : DATOS VALIDADOS Y ENVIADOS"')
+                return True
             else:
-                print('"LOGICA : DATOS INVALIDOS - REGISTRO CANCELADO"')  
+                print('"LOGICA : DATOS INVALIDOS - REGISTRO CANCELADO"')
+                return False  
         except Exception as e:
             print(f"Error en registro: {e}")
+            return False
 
     def modificar_producto(self, id_producto, dato_objetivo, dato_nuevo):
         """Busca un producto y valida el nuevo dato antes de actualizarlo."""
@@ -143,54 +153,86 @@ class LogicaNegocio():
                     
                     if validacion:
                         self.base_datos.producto_modificar_datos(id_producto, dato_objetivo, validacion)
+                        return True
                     else:
                         print('"LOGICA : EL NUEVO DATO ES INVÁLIDO"')
+                        return False
                 else:
                     print('"LOGICA : COLUMNA NO EXISTE"')
+                    return False
             else:
                 print('"LOGICA : PRODUCTO NO ENCONTRADO"')
+                return False
         except Exception as e:
             print(f"Error en modificación: {e}")
+            return False
 
 
 # ==========================================
 # CAPA DE INTERFAZ DE USUARIO (CLI)
 # ==========================================
 
-# Inicialización de objetos
+
+class InterfazGrafica(tk.Tk):
+    def __init__(self, logica: LogicaNegocio):
+        super().__init__()
+        self.logica = logica  # Recibimos la lógica (Inyección de dependencias)
+        self.title("Gestión de Inventario")
+        self.geometry("600x400")
+        
+        self.crear_widgets()
+
+    def crear_widgets(self):
+        # Aquí crearíamos los labels, botones y la tabla
+        tk.Label(self, text="Nombre:").pack()
+        self.entrada_nombre = tk.Entry(self)
+        self.entrada_nombre.pack()
+
+        tk.Label(self, text="Cantidad:").pack()
+        self.entrada_cantidad = tk.Entry(self)
+        self.entrada_cantidad.pack()
+
+        tk.Label(self, text="Precio:").pack()
+        self.entrada_precio = tk.Entry(self)
+        self.entrada_precio.pack()
+
+        tk.Label(self, text="Categoria:").pack()
+        self.entrada_categoria = tk.Entry(self)
+        self.entrada_categoria.pack()
+
+        
+        # Botón que dispara la acción
+        tk.Button(self, text="Registrar", command=self.ejecutar_registro).pack()
+
+    def ejecutar_registro(self):
+        # Extraemos los datos de la GUI y los mandamos a la lógica
+        nombre = self.entrada_nombre.get()
+        cantidad = self.entrada_cantidad.get()
+        precio = self.entrada_precio.get()
+        categoria = self.entrada_categoria.get()
+
+
+        #Limpiamos la entrada luego de que el user presione el boton
+        self.entrada_nombre.delete(0,tk.END)
+        self.entrada_cantidad.delete(0,tk.END)
+        self.entrada_precio.delete(0,tk.END)
+        self.entrada_categoria.delete(0,tk.END)
+
+        operacion = self.logica.registrar_producto(nombre,cantidad,precio,categoria)
+        messagebox.showinfo("Exito","Producto registrado exitosamente")if operacion else messagebox.showerror("Error","Producto invalido")
+
+     
+
+
+'''
+nombre_producto VARCHAR(20) NOT NULL,
+cantidad_producto INTEGER NOT NULL,
+precio_producto NUMERIC(10,2),
+categoria_producto VARCHAR(20),
+id_producto INTEGER PRIMARY KEY AUTOINCREMENT)
+'''
+
 db = GestorDb('productos.db')
-db.crear_tabla() # Aseguramos que la tabla exista al arrancar
 logica = LogicaNegocio(db)
-
-while True:
-    print("\n--- MENÚ DE INVENTARIO ---")
-    opciones = ['1-Registrar productos', '2-Ver productos', '3-Modificar productos', '4-Salir']
-    [print(i) for i in opciones]
-    
-    try:
-        op = int(input(": ")) - 1
-    except ValueError:
-        continue
-
-    if op == 0:
-        logica.registrar_producto(
-            nombre=input("Nombre: "),
-            cantidad=input("Cantidad: "), # Se pasa como string, la lógica lo convierte
-            precio=input("Precio: "),
-            categoria=input("Categoría: ")
-        )
-    elif op == 1:
-        # Llamada correcta a la función con paréntesis
-        datos = db.producto_obtener_datos()
-        for fila in datos:
-            print(f"ID: {fila[4]} | Nombre: {fila[0]} | Stock: {fila[1]} | Precio: ${fila[2]} | Cat: {fila[3]}")
-    elif op == 2:
-        # Mostramos las columnas para ayudar al usuario
-        print("Columnas disponibles:", [col[1] for col in db.obtener_columnas_actuales('productos')])
-        logica.modificar_producto(
-            id_producto=input("ID del producto: "),
-            dato_objetivo=input("Nombre de la columna a cambiar: "),
-            dato_nuevo=input("Nuevo valor: ")
-        )
-    elif op == 3:
-        break
+interfaz = InterfazGrafica(logica)
+interfaz.mainloop()
