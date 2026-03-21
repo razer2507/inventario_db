@@ -1,6 +1,7 @@
 import sqlite3
 import tkinter as tk
 from tkinter import messagebox,ttk
+
 #comit1
 # ==========================================
 # CAPA DE BASE DE DATOS (DATA ACCESS LAYER)
@@ -62,7 +63,7 @@ class GestorDb():
         query = (f'''PRAGMA table_info({tabla});''')
         self.cursor.execute(query)
         columnas = self.cursor.fetchall()
-        return columnas if columnas else None
+        return columnas if columnas else []
 
 
 # ==========================================
@@ -166,7 +167,17 @@ class LogicaNegocio():
         except Exception as e:
             print(f"Error en modificación: {e}")
             return False
+        
+    '''Obtener todos los nombres de las columnas actuales de una lista'''
+    def obtener_columnas_actuales(self,tabla:str):
+        info_columnas=self.base_datos.obtener_columnas_actuales(tabla)
+        return [i[1] for i in info_columnas]
 
+
+    '''Obtener todos los datos de la tabla productos'''
+    def obtener_datos_actuales(self):
+        datos = self.base_datos.producto_obtener_datos()
+        return datos
 
 # ==========================================
 # CAPA DE INTERFAZ DE USUARIO (CLI)
@@ -175,64 +186,109 @@ class LogicaNegocio():
 
 class InterfazGrafica(tk.Tk):
     def __init__(self, logica: LogicaNegocio):
+        '''heredamos de la clase tk.Tk'''
         super().__init__()
         self.logica = logica  # Recibimos la lógica (Inyección de dependencias)
         self.title("Gestión de Inventario")
         self.geometry("600x400")
         
-        self.crear_widgets()
 
-    def crear_widgets(self):
+        '''crea un contenedor para agrupar todos los botones del menu principal'''
+        self.contenedor = tk.Frame(self)
+        self.contenedor.pack(fill='both',expand=True)
+        '''crea los botones para las funciones de registrar,ver,eliminar,etc'''
+        self.crear_menu_principal()
+
+
+    '''Crea el texto del inicio y lo mete en un frame'''
+    def crear_menu_principal(self):
+
+        '''Creamos el texto de presentacion en el menu principal'''
+        self.texto_inicio = tk.Label(self.contenedor,text="INVENTARIO CRUD 1.0")
+        self.texto_inicio.pack()
+
+        '''Creamos el boton de registrar y le asignamos un comando de prueba'''
+        self.registrar_boton = tk.Button(self.contenedor,text='registrar',command=lambda:self.crear_widgets_registro())
+        self.registrar_boton.pack()
+
+        self.visualizar_boton = tk.Button(self.contenedor,text='visualizar',command=lambda:self.crear_ventana_visualizar())
+        self.visualizar_boton.pack()
+
+        self.eliminar_boton = tk.Button(self.contenedor,text='eliminar',command=lambda:print('tocado'))
+        self.eliminar_boton.pack()
+
+    '''Crea una ventana hija para el registro de productos '''
+    def crear_widgets_registro(self):
         # Aquí crearíamos los labels, botones y la tabla
-        tk.Label(self, text="Nombre:").pack()
-        self.entrada_nombre = tk.Entry(self)
-        self.entrada_nombre.pack()
+        ventana_hija = tk.Toplevel(self)
+        ventana_hija.title('Registrar Productos')
 
-        tk.Label(self, text="Cantidad:").pack()
-        self.entrada_cantidad = tk.Entry(self)
-        self.entrada_cantidad.pack()
+        '''Creamos un texto y una entrada para cada dato'''
+        tk.Label(ventana_hija, text="Nombre:").pack()
+        entrada_nombre = tk.Entry(ventana_hija)
+        entrada_nombre.pack()
 
-        tk.Label(self, text="Precio:").pack()
-        self.entrada_precio = tk.Entry(self)
-        self.entrada_precio.pack()
+        tk.Label(ventana_hija, text="Cantidad:").pack()
+        entrada_cantidad = tk.Entry(ventana_hija)
+        entrada_cantidad.pack()
 
-        tk.Label(self, text="Categoria:").pack()
-        self.entrada_categoria = tk.Entry(self)
-        self.entrada_categoria.pack()
+        tk.Label(ventana_hija, text="Precio:").pack()
+        entrada_precio = tk.Entry(ventana_hija)
+        entrada_precio.pack()
+
+        tk.Label(ventana_hija, text="Categoria:").pack()
+        entrada_categoria = tk.Entry(ventana_hija)
+        entrada_categoria.pack()
 
         
-        # Botón que dispara la acción
-        tk.Button(self, text="Registrar", command=self.ejecutar_registro).pack()
+        # Creamos un boton para registrar y le damos como parametro las entradas
+        tk.Button(ventana_hija, text="Registrar", command=lambda:self.ejecutar_registro(
+            entrada_nombre,entrada_cantidad,entrada_precio,entrada_categoria
+        )).pack()
+        tk.Button(ventana_hija,text='Salir',command=lambda:ventana_hija.destroy()).pack()
 
-    def ejecutar_registro(self):
+    def ejecutar_registro(self,entrada_nombre,entrada_cantidad,entrada_precio,entrada_categoria):
         # Extraemos los datos de la GUI y los mandamos a la lógica
-        nombre = self.entrada_nombre.get()
-        cantidad = self.entrada_cantidad.get()
-        precio = self.entrada_precio.get()
-        categoria = self.entrada_categoria.get()
-
+        nombre = entrada_nombre.get()
+        cantidad = entrada_cantidad.get()
+        precio = entrada_precio.get()
+        categoria = entrada_categoria.get()
 
         operacion = self.logica.registrar_producto(nombre,cantidad,precio,categoria)
         messagebox.showinfo("Exito","Producto registrado exitosamente")if operacion else messagebox.showerror("Error","Producto invalido")
 
-
         #Limpiamos la entrada luego de que el user presione el boton
-        self.entrada_nombre.delete(0,tk.END)
-        self.entrada_cantidad.delete(0,tk.END)
-        self.entrada_precio.delete(0,tk.END)
-        self.entrada_categoria.delete(0,tk.END)
+        entrada_nombre.delete(0,tk.END)
+        entrada_cantidad.delete(0,tk.END)
+        entrada_precio.delete(0,tk.END)
+        entrada_categoria.delete(0,tk.END)
+
+    '''Crea una ventana hija para visualizar productos'''
+    def crear_ventana_visualizar(self):
+        ventana_hija = tk.Toplevel(self)
+        ventana_hija.title('Visualizar Productos')
+        ventana_hija.geometry('400x300')
+        columnas = self.logica.obtener_columnas_actuales('productos')
+        tabla = ttk.Treeview(ventana_hija,columns=columnas,show='headings')
+
+        '''Rellenamos los nombre de las columnas y les asignamos una organizacion espacial a cada una'''
+        for i in columnas:
+            '''Le colocamos un nombre a la columna y luego le decimos que se muestre de forma organizada'''
+            tabla.heading(i,text=i.title())
+            tabla.column(i,width=100,anchor=tk.CENTER)
+            
+        tabla.pack(fill='both',expand=True)
+        datos = self.logica.obtener_datos_actuales()
+        for i in datos:
+            tabla.insert('',tk.END,values=i)
 
 
 
-'''
-nombre_producto VARCHAR(20) NOT NULL,
-cantidad_producto INTEGER NOT NULL,
-precio_producto NUMERIC(10,2),
-categoria_producto VARCHAR(20),
-id_producto INTEGER PRIMARY KEY AUTOINCREMENT)
-'''
+    
 
 db = GestorDb('productos.db')
+info_columnas = db.obtener_columnas_actuales('productos')
 logica = LogicaNegocio(db)
 interfaz = InterfazGrafica(logica)
+
 interfaz.mainloop()
